@@ -1,2 +1,2 @@
 # exma
-(ex)tracellular (m)atrix (a)nalyzer - For simple analysis of Biofilm data
+**ex**tracellular **m**atrix **a**nalyzer - For simple analysis of biofilm and extracellular matrix data
