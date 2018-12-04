@@ -1,14 +1,17 @@
 # exma
-## **ex**tracellular **m**atrix **a**nalyzer
+## extracellular matrix analyzer
 
-exma is a command line program for analysis of biofilm thickness in static and microfluidics experiments. In addidtion to supplying the thickness of a series of images representing 3D data from an experiment, exma also stratifies thickness of the biofilm by concentration of top stream vs. bottom stream (for microfluidics mixing eperiments).
+**exma** is a command line program for analysis of biofilm thickness in both static and dynamic experiments. In addition to supplying the biofilm thickness of an experiment, exma can also stratify thickness of the biofilm by concentration of top stream vs. bottom stream in microfluidics mixing eperiments.
 
 A biofilm, as interpreted by exma, can be represented with a series of images. The example set of images below is included in this repo.
-These images all represent a vertical layer of a 3D snapshot for an experiment. Whether measuring the extracellular matrix or the individual cells, exma is able to stack these images, fill in gaps, and provide a custom estimate of the biofilm thickness.
+
+These images all represent a vertical layer of a 3D snapshot for an experiment. Whether measuring the extracellular matrix or the individual cells, exma is able to stack these images, fill in gaps, and provide a customizable estimate of the biofilm thickness.
 
 <img src="Readme/biofilm_explain.png" width="400" height="400">
 
-For microfluidics mixing experiments, exma can also calculate the concentration gradient of two fluids based on some constant data, then supply a thickness vs. concentration table for further analysis.
+For microfluidics mixing experiments, exma can also calculate the concentration gradient of two fluids based on some constant data, then supply a thickness vs. concentration table for further analysis. This gradient can be combined with the thickness data to produce an image like the one shown below.
+
+![final image](Readme/biofilm_display_image.png)
 
 The following was printed from the help file of exma:
 
