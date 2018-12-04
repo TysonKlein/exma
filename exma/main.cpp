@@ -15,29 +15,38 @@ struct EnvironmentVariables
 {
 	//These are all dictated by the files in the specified folder
 	int HEIGHT, WIDTH, DEPTH, THRESHOLD, LAYER_BLUR, MAX_SPACE, CONC_STEP, MIX_X, MIX_Y, DISP_PERCENT, DISP_HEIGHT, DISP_WIDTH, CONC_OFFSET, MAX_THICKNESS;
+	int TABLE_BIN_SIZE;
 	bool DISPLAY, SAVE, VERBOSE, FACING, OVERLAY, TABLE;
 	bool A_BIOFILM, A_CONCENTRATION;
 	std::string imageFolderName;
 	std::vector<std::string> imageFileNames;
 
 	//Config variables
-	float CROSS_AREA = 350.f*75.f; // micrometers squared
-	float FLOW_RATE = 4.f; //microliters per hour
-	float PIXEL_WIDTH = 0.1565983f; //micrometers
+	float CROSS_AREA = 30000; // micrometers squared
+	float FLOW_RATE = 5.f; //microliters per hour
+	float PIXEL_WIDTH = 0.15; //micrometers
 	float LAYER_THICKNESS = 1.f; //micrometers
-	float DIFFUSIVITY = 100.f; //micrometers squared per second
+	float DIFFUSIVITY = 1000.f; //micrometers squared per second
+};
+
+struct colour
+{
+	int R, G, B;
 };
 
 //Functions
 void setEnvironmentVariables(EnvironmentVariables* env);
 void loadImages(cimg_library::CImgList<unsigned char>* list,EnvironmentVariables* env);
 void parseArgs(int argc, char* argv[], EnvironmentVariables* env);
-void drawConcentrationLines(cimg_library::CImg<unsigned char> *concImage, cimg_library::CImg<unsigned char> *drawImage, EnvironmentVariables* env);
-cimg_library::CImg<unsigned char> calcBiofilm(cimg_library::CImgList<unsigned char>* list, EnvironmentVariables* env);
+void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CImg<unsigned char> *drawImage, EnvironmentVariables* env);
+cimg_library::CImg<unsigned char> calcBiofilm(cimg_library::CImgList<unsigned char>* list, EnvironmentVariables* env, bool isDisp);
 cimg_library::CImg<unsigned char> calcConcentrationGradient(cimg_library::CImgList<unsigned char>* list, EnvironmentVariables* env);
 void drawAt(cimg_library::CImg<unsigned char> *image, int x, int y, int R, int G, int B, int size, EnvironmentVariables* env);
 float getConcValue(cimg_library::CImg<unsigned char> *image, int x, int y);
 void calcBinnedThickness(cimg_library::CImg<unsigned char> *concImage, cimg_library::CImg<unsigned char> *biofilmImage, EnvironmentVariables* env);
+colour getHeatmapColour(int val);
+void iniInput(std::string iniFile, EnvironmentVariables* env);
+
 
 int main(int argc, char* argv[])
 {
@@ -52,6 +61,11 @@ int main(int argc, char* argv[])
 	
 		//Verify that environment variables are correct, then set file names for analysis	
 		try {
+			if (env.VERBOSE)
+				std::cout << "Examining ini file..." << std::endl;
+			iniInput("exma.ini", &env);
+			if (env.VERBOSE)
+				std::cout << "Examining images..." << std::endl;
 			setEnvironmentVariables(&env);
 		}
 		catch (const char* msg) {
@@ -64,12 +78,23 @@ int main(int argc, char* argv[])
 	
 		//Verify that environment variables are correct and load each image into the list
 		try {
+			if (env.VERBOSE)
+				std::cout << "Loading Images..." << std::endl;
 			loadImages(&imageList, &env);
 		}
 		catch (const char* msg) {
 			std::cerr << msg << std::endl;
 			return 0;
 		}
+
+		//Folder for outputs
+		if (!fs::is_directory("exma_output") || !fs::exists("exma_output"))
+		{
+			if (env.VERBOSE)
+				std::cout << "Creating output folder..." << std::endl;
+			fs::create_directory("exma_output"); // create src folder
+		}
+
 	/////////////////////////////////////////////////////////////////////////////////
 
 	/////////////////////////////////////////////////////////////////////////////////
@@ -111,51 +136,60 @@ int main(int argc, char* argv[])
 	//DO ANALYSIS AND COMPUTATIONS
 		
 		//Images to display for both
-		cimg_library::CImg<unsigned char> biofilm_image, concentration_image;
+		cimg_library::CImg<unsigned char> biofilm_image, concentration_image, display_image;
 
 		//If concentration gradient needs to be calculated
 		if (env.A_CONCENTRATION)
 		{
+			if (env.VERBOSE)
+				std::cout << "Calculating concentration gradient..." << std::endl;
 			concentration_image = calcConcentrationGradient(&imageList, &env);
 		}
 
 		//If biofilm thickness needs to be calculated
 		if (env.A_BIOFILM)
 		{
-			biofilm_image = calcBiofilm(&imageList, &env);
+			if (env.VERBOSE)
+				std::cout << "Calculating biofilm data..." << std::endl;
+			biofilm_image = calcBiofilm(&imageList, &env, false);
+			display_image = calcBiofilm(&imageList, &env, true);
 		}
 
 		if (env.A_CONCENTRATION && env.TABLE && env.A_BIOFILM)
 		{
+			if (env.VERBOSE)
+				std::cout << "Exporting table: thickness vs. concentration..." << std::endl;
 			calcBinnedThickness(&concentration_image, &biofilm_image, &env);
 		}
 
-		if (env.A_CONCENTRATION && env.OVERLAY && env.A_BIOFILM)
+		if (env.OVERLAY && env.A_BIOFILM)
 		{
-			drawConcentrationLines(&concentration_image, &biofilm_image, &env);
+			if (env.VERBOSE)
+				std::cout << "Adding overlay to display..." << std::endl;
+			drawOverlay(&concentration_image, &display_image, &env);
 		}
 
-	if (env.DISPLAY)
-	{
-		if (env.A_BIOFILM)
+		if (env.VERBOSE)
+			std::cout << "Saving images..." << std::endl;
+		display_image.save_bmp("exma_output/biofilm_display_image.bmp");
+		biofilm_image.save_bmp("exma_output/biofilm_data.bmp");
+
+		if (env.VERBOSE)
+			std::cout << "Displaying final data..." << std::endl;
+
+		if (env.DISPLAY)
 		{
-			cimg_library::CImgDisplay main_disp(biofilm_image, "Biofilm Thickness");
+			if (env.A_BIOFILM)
+			{
+				cimg_library::CImgDisplay main_disp(display_image, "Biofilm Thickness");
 
-			main_disp.resize(env.DISP_WIDTH, env.DISP_HEIGHT, true);
+				main_disp.resize(env.DISP_WIDTH, env.DISP_HEIGHT, true);
 
-			while (!main_disp.is_closed()) {
-				main_disp.wait();
+				while (!main_disp.is_closed()) {
+					main_disp.wait();
+				}
 			}
-		}		
-	}
-
-	try {
-		//IMGreader(blah blah blah);
-	} catch (const char* msg) {
-		std::cerr << msg << std::endl;
-	}
-
-	biofilm_image.save_bmp("Biofilm_thickness.bmp");
+		}
 }
 
 void parseArgs(int argc, char* argv[], EnvironmentVariables* env)
@@ -168,26 +202,27 @@ void parseArgs(int argc, char* argv[], EnvironmentVariables* env)
 			.positional_help("[optional args]")
 			.show_positional_help();
 
-		options.add_options("Input") //For all variables influencing the input
+		options.add_options("Input/Output") //For all variables influencing the input
 			("f,folder", "Folder name containing image data", cxxopts::value<std::string>(env->imageFolderName))
+			("s,save", "Save all outputs as images", cxxopts::value<bool>(env->SAVE))
+			("t,table", "Save thickness vs concentration as table", cxxopts::value<bool>(env->TABLE))
+			("table_bins", "Number of bins for output table", cxxopts::value<int>(env->TABLE_BIN_SIZE)->default_value("500"))
+			("o,overlay", "Overlay descriptive information on outputs", cxxopts::value<bool>(env->OVERLAY))
+			("d,display", "Display all outputs to screen", cxxopts::value<bool>(env->DISPLAY))
+			("disp_percent", "% scale of original image size", cxxopts::value<int>(env->DISP_PERCENT)->default_value("30"))
+			;
+
+		options.add_options("Biofilm") //For all variables influencing the analysis
+			("b,biofilm", "Biofilm thickness", cxxopts::value<bool>(env->A_BIOFILM))
 			("m,minimum_threshold", "Minimum intensity threshold for detection", cxxopts::value<int>(env->THRESHOLD)->default_value("50"))
-			("conc_step", "Step size for concentration lines around 50%", cxxopts::value<int>(env->CONC_STEP)->default_value("20"))
 			("layer_blur", "2D image blur radius", cxxopts::value<int>(env->LAYER_BLUR)->default_value("0"))
 			("max_space", "Largest allowable vertical gap", cxxopts::value<int>(env->MAX_SPACE)->default_value("100"))
 			;
 
-		options.add_options("Analysis") //For all variables influencing the analysis
-			("b,biofilm", "Biofilm thickness", cxxopts::value<bool>(env->A_BIOFILM))
+		options.add_options("Concentration") //For all variables influencing the output of data
 			("c,concentration", "Concentration gradient", cxxopts::value<bool>(env->A_CONCENTRATION))
+			("conc_step", "Step size for concentration lines around 50%", cxxopts::value<int>(env->CONC_STEP)->default_value("20"))
 			("conc_offset", "Offset in pixels for start of concentration analysis from mixing point", cxxopts::value<int>(env->CONC_OFFSET)->default_value("200"))
-			;
-
-		options.add_options("Output") //For all variables influencing the output of data
-			("s,save", "Save all outputs as images", cxxopts::value<bool>(env->SAVE))
-			("t,table", "Save thickness vs concentration as table", cxxopts::value<bool>(env->TABLE))
-			("o,overlay", "Overlay descriptive information on outputs", cxxopts::value<bool>(env->OVERLAY))
-			("d,display", "Display all outputs to screen", cxxopts::value<bool>(env->DISPLAY))
-			("disp_percent", "% scale of original image size", cxxopts::value<int>(env->DISP_PERCENT)->default_value("30"))
 			;
 
 		options.add_options() //Other options
@@ -295,7 +330,7 @@ void loadImages(cimg_library::CImgList<unsigned char>* list, EnvironmentVariable
 	}
 }
 
-cimg_library::CImg<unsigned char> calcBiofilm(cimg_library::CImgList<unsigned char>* list, EnvironmentVariables* env)
+cimg_library::CImg<unsigned char> calcBiofilm(cimg_library::CImgList<unsigned char>* list, EnvironmentVariables* env, bool isDisplay)
 {
 	cimg_library::CImg<unsigned char> output = (*list)[1];
 	int** OUTPUT;
@@ -345,14 +380,24 @@ cimg_library::CImg<unsigned char> calcBiofilm(cimg_library::CImgList<unsigned ch
 					OUTPUT[i][j] += 255 / env->DEPTH;
 				}
 			}
-			if (env->FACING && j < env->MIX_X)
+			if (env->A_CONCENTRATION)
 			{
-				if (OUTPUT[i][j] > maxVal)
+				if (env->FACING && j < env->MIX_X)
 				{
-					maxVal = OUTPUT[i][j];
+					if (OUTPUT[i][j] > maxVal)
+					{
+						maxVal = OUTPUT[i][j];
+					}
+				}
+				if (!env->FACING && j > env->MIX_X)
+				{
+					if (OUTPUT[i][j] > maxVal)
+					{
+						maxVal = OUTPUT[i][j];
+					}
 				}
 			}
-			if (!env->FACING && j > env->MIX_X)
+			else
 			{
 				if (OUTPUT[i][j] > maxVal)
 				{
@@ -373,9 +418,20 @@ cimg_library::CImg<unsigned char> calcBiofilm(cimg_library::CImgList<unsigned ch
 				if (M > 255)
 					M = 255;
 
-				output(j, i, 0) = M;
-				output(j, i, 1) = 0;
-				output(j, i, 2) = 255-M;
+				if (isDisplay)
+				{
+					colour Col = getHeatmapColour(M);
+
+					output(j, i, 0) = Col.R;
+					output(j, i, 1) = Col.G;
+					output(j, i, 2) = Col.B;
+				}
+				else
+				{
+					output(j, i, 0) = M;
+					output(j, i, 1) = M;
+					output(j, i, 2) = M;
+				}
 		}
 	}
 
@@ -489,102 +545,105 @@ cimg_library::CImg<unsigned char> calcConcentrationGradient(cimg_library::CImgLi
 	return output;
 }
 
-void drawConcentrationLines(cimg_library::CImg<unsigned char> *concImage, cimg_library::CImg<unsigned char> *drawImage, EnvironmentVariables* env)
+void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CImg<unsigned char> *drawImage, EnvironmentVariables* env)
 {
-	//First, daw the concentration gradient lines for the different concentrations
 	int draw_size = 4, textSize = 45;
 	unsigned char white[] = { 255,255,255 };
-	//Find smallest concentration stratification
-	float step = 50.f, minstep;
-	do
+	if (env->A_CONCENTRATION)
 	{
-		step = step - float(env->CONC_STEP);
-	} while (step > 0.f);
-	step += env->CONC_STEP;
-	minstep = step;
-	
-	if (env->FACING)
-	{
-		for (int i = env->MIX_X - env->CONC_OFFSET; i >= 0; i--)
+		//First, daw the concentration gradient lines for the different concentrations
+		//Find smallest concentration stratification
+		float step = 50.f, minstep;
+		do
 		{
-			while (step < 100.f)
+			step = step - float(env->CONC_STEP);
+		} while (step > 0.f);
+		step += env->CONC_STEP;
+		minstep = step;
+
+		if (env->FACING)
+		{
+			for (int i = env->MIX_X - env->CONC_OFFSET; i >= 0; i--)
 			{
-				//Conc lowest on top
-				if (getConcValue(concImage, 0, 0) < getConcValue(concImage, 0, env->HEIGHT - 1))
+				while (step < 100.f)
 				{
-					for (int j = 0; j < env->HEIGHT; j++)
+					//Conc lowest on top
+					if (getConcValue(concImage, 0, 0) < getConcValue(concImage, 0, env->HEIGHT - 1))
 					{
-						if (getConcValue(concImage, i, j) > step)
+						for (int j = 0; j < env->HEIGHT; j++)
 						{
-							if (i == env->MIX_X - env->CONC_OFFSET)
+							if (getConcValue(concImage, i, j) > step)
 							{
-								drawImage->draw_text(env->MIX_X - env->CONC_OFFSET + 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+								if (i == env->MIX_X - env->CONC_OFFSET)
+								{
+									drawImage->draw_text(env->MIX_X - env->CONC_OFFSET + 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+								}
+								step = step + float(env->CONC_STEP);
+								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
 							}
-							step = step + float(env->CONC_STEP);
-							drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
+						}
+					}
+					//Conc lowest on bottom
+					else
+					{
+						for (int j = env->HEIGHT - 1; j >= 0; j--)
+						{
+							if (getConcValue(concImage, i, j) > step)
+							{
+								if (i == env->MIX_X - env->CONC_OFFSET)
+								{
+									drawImage->draw_text(env->MIX_X - env->CONC_OFFSET + 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+								}
+								step = step + float(env->CONC_STEP);
+								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
+							}
 						}
 					}
 				}
-				//Conc lowest on bottom
-				else
-				{
-					for (int j = env->HEIGHT - 1; j >= 0; j--)
-					{
-						if (getConcValue(concImage, i, j) > step)
-						{
-							if (i == env->MIX_X - env->CONC_OFFSET)
-							{
-								drawImage->draw_text(env->MIX_X - env->CONC_OFFSET + 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
-							}
-							step = step + float(env->CONC_STEP);
-							drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
-						}
-					}
-				}
+				step = minstep;
 			}
-			step = minstep;
 		}
-	}
-	else
-	{
-		for (int i = env->MIX_X + env->CONC_OFFSET; i < env->WIDTH; i++)
+		else
 		{
-			while (step < 100.f)
+			for (int i = env->MIX_X + env->CONC_OFFSET; i < env->WIDTH; i++)
 			{
-				//Conc lowest on top
-				if (getConcValue(concImage, 0, 0) < getConcValue(concImage, 0, env->HEIGHT - 1))
+				while (step < 100.f)
 				{
-					for (int j = 0; j < env->HEIGHT; j++)
+					//Conc lowest on top
+					if (getConcValue(concImage, 0, 0) < getConcValue(concImage, 0, env->HEIGHT - 1))
 					{
-						if (getConcValue(concImage, i, j) > step)
+						for (int j = 0; j < env->HEIGHT; j++)
 						{
-							if (i == env->MIX_X + env->CONC_OFFSET)
+							if (getConcValue(concImage, i, j) > step)
 							{
-								drawImage->draw_text(env->MIX_X + env->CONC_OFFSET - 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+								if (i == env->MIX_X + env->CONC_OFFSET)
+								{
+									drawImage->draw_text(env->MIX_X + env->CONC_OFFSET - 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+								}
+								step = step + float(env->CONC_STEP);
+								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
 							}
-							step = step + float(env->CONC_STEP);
-							drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
+						}
+					}
+					//Conc lowest on bottom
+					else
+					{
+						for (int j = env->HEIGHT - 1; j >= 0; j--)
+						{
+							if (getConcValue(concImage, i, j) > step)
+							{
+								if (i == env->MIX_X + env->CONC_OFFSET)
+								{
+									drawImage->draw_text(env->MIX_X + env->CONC_OFFSET - 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+								}
+								step = step + float(env->CONC_STEP);
+								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
+							}
 						}
 					}
 				}
-				//Conc lowest on bottom
-				else
-				{
-					for (int j = env->HEIGHT - 1; j >= 0; j--)
-					{
-						if (getConcValue(concImage, i, j) > step)
-						{
-							if (i == env->MIX_X + env->CONC_OFFSET)
-							{
-								drawImage->draw_text(env->MIX_X + env->CONC_OFFSET - 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
-							}
-							step = step + float(env->CONC_STEP);
-							drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
-						}
-					}
-				}
+				step = minstep;
 			}
-			step = minstep;
 		}
 	}
 
@@ -607,14 +666,16 @@ void drawConcentrationLines(cimg_library::CImg<unsigned char> *concImage, cimg_l
 
 		for (int i = 0; i < abs(LendX - LstartX); i++)
 		{
-			drawAt(drawImage, LstartX + i, LstartY, 255*float(i)/float(abs(LendX - LstartX)), 128, 255 - 255 * float(i) / float(abs(LendX - LstartX)), draw_size*3, env);
-			drawAt(drawImage, LstartX + i, LendY, 255, 255, 255, draw_size*3, env);
+			colour Col = getHeatmapColour(255 * float(i) / float(abs(LendX - LstartX)));
+			drawAt(drawImage, LstartX + i, LstartY, Col.R, Col.G, Col.B, draw_size * 3, env);
+			drawAt(drawImage, LstartX + i, LendY, 255,255,255, draw_size*3, env);
 		}
 		std::string s;
 		std::string ms = "Biofilm height (µm)";
 		drawImage->draw_text(LstartX, LstartY - 55, ms.c_str(), white, 0, 1, textSize);
-		drawImage->draw_text(LstartX, LstartY + 30 ,"0", white, 0, 1, textSize);
-		drawImage->draw_text(LendX, LstartY + 30, std::to_string(env->MAX_THICKNESS).c_str(), white, 0, 1, textSize);
+		drawImage->draw_text(LstartX, LstartY + 20 ,"0", white, 0, 1, textSize*0.6f);
+		drawImage->draw_text((LendX + LstartX)/2 - 12, LstartY + 20, std::to_string(env->MAX_THICKNESS/2).c_str(), white, 0, 1, textSize*0.6f);
+		drawImage->draw_text(LendX - 24, LstartY + 20, std::to_string(env->MAX_THICKNESS).c_str(), white, 0, 1, textSize*0.6f);
 		drawImage->draw_text(LstartX, LendY - 55, "50 µm", white, 0, 1, textSize);
 
 	for (int i = env->HEIGHT/4; i < 3*env->HEIGHT/4; i++)
@@ -649,7 +710,7 @@ void drawAt(cimg_library::CImg<unsigned char> *image, int x, int y, int R, int G
 
 void calcBinnedThickness(cimg_library::CImg<unsigned char> *concImage, cimg_library::CImg<unsigned char> *biofilmImage, EnvironmentVariables* env)
 {
-	float binSize = 1.f;
+	float binSize = 100.f/float(env->TABLE_BIN_SIZE);
 	float* AV_THICKNESS;
 	float* TOT_THICK;
 	float* NUM_THICK;
@@ -687,7 +748,7 @@ void calcBinnedThickness(cimg_library::CImg<unsigned char> *concImage, cimg_libr
 	}
 
 	std::ofstream outfile;
-	outfile.open("Output.csv");
+	outfile.open("exma_output/thickness_vs_concentration.csv");
 	outfile.clear();
 	outfile << "% concentration upper stream, thickness (micrometers)\n";
 
@@ -697,4 +758,79 @@ void calcBinnedThickness(cimg_library::CImg<unsigned char> *concImage, cimg_libr
 	}
 
 	outfile.close();
+}
+
+colour getHeatmapColour(int val)
+{
+	colour returnCol;
+	returnCol.R = 0;
+	returnCol.G = 0;
+	returnCol.B = 0;
+
+	switch (int(val / (256.f / 6.f)))
+	{
+	case 0: //Black to Blue
+		returnCol.B = val * 6.f;
+		break;
+	case 1: //Blue to Cyan
+		returnCol.B = 255;
+		returnCol.G = (val - 1.f*256.f/6.f) * 6.f * 0.9f;
+		break;
+	case 2: //Cyan to Green
+		returnCol.G = 255*0.9f;
+		returnCol.B = 255 - (val - 2.f*256.f / 6.f) * 6.f;
+		break;
+	case 3: //Green to Yellow
+		returnCol.G = 255* 0.9f;
+		returnCol.R = (val - 3.f*256.f / 6.f) * 6.f;
+		break;
+	case 4: //Yellow to Red
+		returnCol.R = 255;
+		returnCol.G = 255 - (val - 4.f*256.f / 6.f) * 6.f* 0.9f;
+		break;
+	case 5: //Red to White
+		returnCol.R = 255;
+		returnCol.G = (val - 5.f*256.f / 6.f) * 6.f;
+		returnCol.B = (val - 5.f*256.f / 6.f) * 6.f;
+		break;
+	default:
+		break;
+	}
+
+	return returnCol;
+}
+
+void iniInput(std::string iniFile, EnvironmentVariables* env)
+{
+	std::ifstream inFile(iniFile);
+	if (!inFile.fail()) {
+		std::string name; // var name buffer
+		std::string comment; // var name buffer
+		std::string value; // var value buffer
+
+		while (inFile)
+		{
+			std::getline(inFile, name, '=');
+			std::getline(inFile, value, '#');
+			std::getline(inFile, comment, '\n');
+
+			if (name == "CROSS_AREA")
+				env->CROSS_AREA = atof(value.c_str());
+			if (name == "FLOW_RATE")
+				env->FLOW_RATE = atof(value.c_str());
+			if (name == "PIXEL_WIDTH")
+				env->PIXEL_WIDTH = atof(value.c_str());
+			if (name == "LAYER_THICKNESS")
+				env->LAYER_THICKNESS = atof(value.c_str());
+			if (name == "DIFFUSIVITY")
+				env->DIFFUSIVITY = atof(value.c_str());
+		}
+		inFile.close();
+	}
+	else
+	{
+		throw "No ini file found";
+	}
+
+	return;
 }
