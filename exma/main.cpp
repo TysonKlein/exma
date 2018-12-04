@@ -17,7 +17,7 @@ struct EnvironmentVariables
 	int HEIGHT, WIDTH, DEPTH, THRESHOLD, LAYER_BLUR, MAX_SPACE, CONC_STEP, MIX_X, MIX_Y, DISP_PERCENT, DISP_HEIGHT, DISP_WIDTH, CONC_OFFSET, MAX_THICKNESS;
 	int TABLE_BIN_SIZE;
 	bool DISPLAY, SAVE, VERBOSE, FACING, OVERLAY, TABLE;
-	bool A_BIOFILM, A_CONCENTRATION;
+	bool A_BIOFILM = true, A_CONCENTRATION;
 	std::string imageFolderName;
 	std::vector<std::string> imageFileNames;
 
@@ -213,7 +213,6 @@ void parseArgs(int argc, char* argv[], EnvironmentVariables* env)
 			;
 
 		options.add_options("Biofilm") //For all variables influencing the analysis
-			("b,biofilm", "Biofilm thickness", cxxopts::value<bool>(env->A_BIOFILM))
 			("m,minimum_threshold", "Minimum intensity threshold for detection", cxxopts::value<int>(env->THRESHOLD)->default_value("50"))
 			("layer_blur", "2D image blur radius", cxxopts::value<int>(env->LAYER_BLUR)->default_value("0"))
 			("max_space", "Largest allowable vertical gap", cxxopts::value<int>(env->MAX_SPACE)->default_value("100"))
