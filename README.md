@@ -1,12 +1,12 @@
 # exma
-## **ex**tracellular **m**atrix **a**nalyzer - For simple analysis of biofilm and extracellular matrix data
+## **ex**tracellular **m**atrix **a**nalyzer
 
 exma is a command line program for analysis of biofilm thickness in static and microfluidics experiments. In addidtion to supplying the thickness of a series of images representing 3D data from an experiment, exma also stratifies thickness of the biofilm by concentration of top stream vs. bottom stream (for microfluidics mixing eperiments).
 
 A biofilm, as interpreted by exma, can be represented with a series of images. The example set of images below is included in this repo.
 These images all represent a vertical layer of a 3D snapshot for an experiment. Whether measuring the extracellular matrix or the individual cells, exma is able to stack these images, fill in gaps, and provide a custom estimate of the biofilm thickness.
 
-![Biofilm Layers](Readme/biofilm_explain.png)
+<img src="Readme/biofilm_explain.png" width="400" height="400">
 
 For microfluidics mixing experiments, exma can also calculate the concentration gradient of two fluids based on some constant data, then supply a thickness vs. concentration table for further analysis.
 
@@ -42,12 +42,28 @@ Usage:
       --disp_percent arg  % scale of original image size (default: 30)
 ```
 
-## Basic functions
+## Command line options
 
 Note that all options with **arg** must be followed by a space, then the argument, then another space.
 
 ex: **-m 51** sets the minimum threshold to 51
 
-# Biofilm Options
+**--minimum_threshold 51** does the same
+
+### Biofilm Options
 *-m arg or --minimum_threshold arg* : Sets arg to be the minimum threshold for detecting whether a pixel "counts", and should therefore be included in the thickness. This is set to 50 unless changed.
 
+*--layer_blur arg* : For each horizontal layer (each image) set the pixel blur radius. This is set to 0 unless changed (no blur), and should only be changed if image data has 'dead pixels' that can be smoothed out.
+
+*--max_space arg* : Sets the maximum amount of 'empty vertical space' that will be counted between two detected pixels
+
+  ex: for **--max_space 5**, and we have 10 layers as below ( | represents a detected pixel, . is undetected)
+  
+  |........| = ||........ <- Thickness  = 2
+  
+  |....|.... = ||||||.... <- Thickness  = 6
+  
+### Concentration Options
+  *-c or --concentration* : Include this option to also calculate the concentration gradient for mixing between two streams in a microfluidics experiment. An image prompt with the bottom image will be provided so you can select the 'mixing point'
+  
+  *--conc_step arg* : Sets the step size for concentration lines in output image. The step size represents 
