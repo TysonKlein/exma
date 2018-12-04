@@ -1,5 +1,5 @@
 # exma
-##**ex**tracellular **m**atrix **a**nalyzer - For simple analysis of biofilm and extracellular matrix data
+## **ex**tracellular **m**atrix **a**nalyzer - For simple analysis of biofilm and extracellular matrix data
 
 exma is a command line program for analysis of biofilm thickness in static and microfluidics experiments. In addidtion to supplying the thickness of a series of images representing 3D data from an experiment, exma also stratifies thickness of the biofilm by concentration of top stream vs. bottom stream (for microfluidics mixing eperiments).
 
@@ -42,10 +42,12 @@ Usage:
       --disp_percent arg  % scale of original image size (default: 30)
 ```
 
-##Basic functions
+## Basic functions
 
 Note that all options with **arg** must be followed by a space, then the argument, then another space.
-ex: **-m 51** sets he minimum threshold to 51
 
-#Biofilm Options
--m arg or --minimum_threshold arg : Sets arg to be the minimum threshold for detecting whether a pixel "counts", and should therefore be included in the thickness. This is set to 50 unless changed.
+ex: **-m 51** sets the minimum threshold to 51
+
+# Biofilm Options
+*-m arg or --minimum_threshold arg* : Sets arg to be the minimum threshold for detecting whether a pixel "counts", and should therefore be included in the thickness. This is set to 50 unless changed.
+
