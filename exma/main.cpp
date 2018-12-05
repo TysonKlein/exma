@@ -14,7 +14,7 @@ namespace fs = std::experimental::filesystem;
 struct EnvironmentVariables
 {
 	//These are all dictated by the files in the specified folder
-	int HEIGHT, WIDTH, DEPTH, THRESHOLD, LAYER_BLUR, MAX_SPACE, CONC_STEP, MIX_X, MIX_Y, DISP_PERCENT, DISP_HEIGHT, DISP_WIDTH, CONC_OFFSET, MAX_THICKNESS;
+	int HEIGHT, WIDTH, DEPTH, THRESHOLD, LAYER_BLUR, MAX_SPACE, CONC_STEP, MIX_X, MIX_Y, DISP_PERCENT, DISP_HEIGHT, DISP_WIDTH, CONC_OFFSET, MAX_THICKNESS, CONC_FIDELITY;
 	int TABLE_BIN_SIZE;
 	bool DISPLAY, SAVE, VERBOSE, FACING, OVERLAY, TABLE;
 	bool A_BIOFILM = true, A_CONCENTRATION;
@@ -88,11 +88,11 @@ int main(int argc, char* argv[])
 		}
 
 		//Folder for outputs
-		if (!fs::is_directory("exma_output") || !fs::exists("exma_output"))
+		if (!fs::is_directory(env.imageFolderName + "_exma_analysis") || !fs::exists(env.imageFolderName + "_exma_analysis"))
 		{
 			if (env.VERBOSE)
 				std::cout << "Creating output folder..." << std::endl;
-			fs::create_directory("exma_output"); // create src folder
+			fs::create_directory(env.imageFolderName + "_exma_analysis"); // create src folder
 		}
 
 	/////////////////////////////////////////////////////////////////////////////////
@@ -222,6 +222,7 @@ void parseArgs(int argc, char* argv[], EnvironmentVariables* env)
 			("c,concentration", "Concentration gradient", cxxopts::value<bool>(env->A_CONCENTRATION))
 			("conc_step", "Step size for concentration lines around 50%", cxxopts::value<int>(env->CONC_STEP)->default_value("20"))
 			("conc_offset", "Offset in pixels for start of concentration analysis from mixing point", cxxopts::value<int>(env->CONC_OFFSET)->default_value("200"))
+			("conc_fidelity", "Number of iterations to calculate concentration gradient", cxxopts::value<int>(env->CONC_FIDELITY)->default_value("10"))
 			;
 
 		options.add_options() //Other options
@@ -442,8 +443,8 @@ cimg_library::CImg<unsigned char> calcConcentrationGradient(cimg_library::CImgLi
 	cimg_library::CImg<unsigned char> output = (*list)[1];
 	int** OUTPUT;
 
-	float C_max = 256.f*256.f*256.f, D = 100.f, h = float(env->HEIGHT) * env->PIXEL_WIDTH / 2.f, L = float(env->HEIGHT)* env->PIXEL_WIDTH ,flow_rate = env->FLOW_RATE*1000000000.f/(60.f*60.f*env->CROSS_AREA);
-	int C = 0, k_max = 10;
+	float C_max = 256.f*256.f*256.f, D = env->DIFFUSIVITY, h = float(env->HEIGHT) * env->PIXEL_WIDTH / 2.f, L = float(env->HEIGHT)* env->PIXEL_WIDTH ,flow_rate = env->FLOW_RATE*1000000000.f/(60.f*60.f*env->CROSS_AREA);
+	int C = 0, k_max = env->CONC_FIDELITY;
 
 	OUTPUT = new int*[env->HEIGHT];
 	for (int i = 0; i < env->HEIGHT; i++)
