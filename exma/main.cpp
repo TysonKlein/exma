@@ -169,10 +169,13 @@ int main(int argc, char* argv[])
 			drawOverlay(&concentration_image, &display_image, &env);
 		}
 
-		if (env.VERBOSE)
-			std::cout << "Saving images..." << std::endl;
-		display_image.save_bmp((env.imageFolderName + "_exma_analysis/biofilm_display_image.bmp").c_str());
-		biofilm_image.save_bmp((env.imageFolderName + "_exma_analysis/biofilm_data.bmp").c_str());
+		if (env.SAVE)
+		{
+			if (env.VERBOSE)
+				std::cout << "Saving images..." << std::endl;
+			display_image.save_bmp((env.imageFolderName + "_exma_analysis/biofilm_display_image.bmp").c_str());
+			biofilm_image.save_bmp((env.imageFolderName + "_exma_analysis/biofilm_data.bmp").c_str());
+		}
 
 		if (env.VERBOSE)
 			std::cout << "Displaying final data..." << std::endl;
@@ -547,8 +550,9 @@ cimg_library::CImg<unsigned char> calcConcentrationGradient(cimg_library::CImgLi
 
 void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CImg<unsigned char> *drawImage, EnvironmentVariables* env)
 {
-	int draw_size = 4, textSize = 45;
+	int draw_size = 8, textSize = 45;
 	unsigned char white[] = { 255,255,255 };
+	unsigned char black[] = { 0,0,0 };
 	if (env->A_CONCENTRATION)
 	{
 		//First, daw the concentration gradient lines for the different concentrations
@@ -576,7 +580,12 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 							{
 								if (i == env->MIX_X - env->CONC_OFFSET)
 								{
-									drawImage->draw_text(env->MIX_X - env->CONC_OFFSET + 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+									drawImage->draw_text(env->MIX_X - env->CONC_OFFSET + 60, j - textSize / 2,
+										std::to_string(int(step)).c_str(),
+										white,
+										black,
+										1.f,
+										textSize);
 								}
 								step = step + float(env->CONC_STEP);
 								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
@@ -592,7 +601,14 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 							{
 								if (i == env->MIX_X - env->CONC_OFFSET)
 								{
-									drawImage->draw_text(env->MIX_X - env->CONC_OFFSET + 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+									drawImage->draw_text(
+										env->MIX_X - env->CONC_OFFSET + 60,
+										j - textSize / 2,
+										std::to_string(int(step)).c_str(),
+										white,
+										black,
+										1.f,
+										textSize);
 								}
 								step = step + float(env->CONC_STEP);
 								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
@@ -618,7 +634,12 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 							{
 								if (i == env->MIX_X + env->CONC_OFFSET)
 								{
-									drawImage->draw_text(env->MIX_X + env->CONC_OFFSET - 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+									drawImage->draw_text(env->MIX_X + env->CONC_OFFSET - 60, j - textSize / 2,
+										std::to_string(int(step)).c_str(),
+										white,
+										black,
+										1.f,
+										textSize);
 								}
 								step = step + float(env->CONC_STEP);
 								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
@@ -634,7 +655,12 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 							{
 								if (i == env->MIX_X + env->CONC_OFFSET)
 								{
-									drawImage->draw_text(env->MIX_X + env->CONC_OFFSET - 60, j - textSize / 2, std::to_string(int(step)).c_str(), white, 0, 1, textSize);
+									drawImage->draw_text(env->MIX_X + env->CONC_OFFSET - 60, j - textSize / 2,
+										std::to_string(int(step)).c_str(),
+										white,
+										black,
+										1.f,
+										textSize);
 								}
 								step = step + float(env->CONC_STEP);
 								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
@@ -678,7 +704,7 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 		drawImage->draw_text(LendX - 24, LstartY + 20, std::to_string(env->MAX_THICKNESS).c_str(), white, 0, 1, textSize*0.6f);
 		drawImage->draw_text(LstartX, LendY - 55, "50 µm", white, 0, 1, textSize);
 
-	for (int i = env->HEIGHT/4; i < 3*env->HEIGHT/4; i++)
+	for (int i = env->MIX_Y - env->HEIGHT/4; i < env->MIX_Y + env->HEIGHT / 4; i++)
 	{
 		if (env->FACING)
 			drawAt(drawImage, env->MIX_X - env->CONC_OFFSET, i, 255, 50, 50, draw_size, env);
@@ -726,24 +752,50 @@ void calcBinnedThickness(cimg_library::CImg<unsigned char> *concImage, cimg_libr
 		NUM_THICK[j] = 0;
 	}
 
-	for (int i = env->MIX_X + env->CONC_OFFSET; i < env->WIDTH; i++)
+	if (env->FACING)
 	{
-		for (int j = 0; j < env->HEIGHT; j++)
+		for (int i = 0; i <= env->MIX_X - env->CONC_OFFSET; i++)
 		{
-			TOT_THICK[int(getConcValue(concImage, i, j) / binSize)] += float(biofilmImage->operator()(i, j, 0)) / 255.f*env->MAX_THICKNESS;
-			NUM_THICK[int(getConcValue(concImage, i, j) / binSize)] += 1;
+			for (int j = 0; j < env->HEIGHT; j++)
+			{
+				TOT_THICK[int(getConcValue(concImage, i, j) / binSize)] += float(biofilmImage->operator()(i, j, 0)) / 255.f*env->MAX_THICKNESS;
+				NUM_THICK[int(getConcValue(concImage, i, j) / binSize)] += 1;
+			}
+		}
+
+		for (int j = 0; j < int(100.f / binSize); j++)
+		{
+			if (NUM_THICK[j] > 0)
+			{
+				AV_THICKNESS[j] = TOT_THICK[j] / NUM_THICK[j];
+			}
+			else
+			{
+				AV_THICKNESS[j] = 0.f;
+			}
 		}
 	}
-
-	for (int j = 0; j < int(100.f / binSize); j++)
+	else
 	{
-		if (NUM_THICK[j] > 0)
+		for (int i = env->MIX_X + env->CONC_OFFSET; i < env->WIDTH; i++)
 		{
-			AV_THICKNESS[j] = TOT_THICK[j]/NUM_THICK[j];
+			for (int j = 0; j < env->HEIGHT; j++)
+			{
+				TOT_THICK[int(getConcValue(concImage, i, j) / binSize)] += float(biofilmImage->operator()(i, j, 0)) / 255.f*env->MAX_THICKNESS;
+				NUM_THICK[int(getConcValue(concImage, i, j) / binSize)] += 1;
+			}
 		}
-		else
+
+		for (int j = 0; j < int(100.f / binSize); j++)
 		{
-			AV_THICKNESS[j] = 0.f;
+			if (NUM_THICK[j] > 0)
+			{
+				AV_THICKNESS[j] = TOT_THICK[j] / NUM_THICK[j];
+			}
+			else
+			{
+				AV_THICKNESS[j] = 0.f;
+			}
 		}
 	}
 
