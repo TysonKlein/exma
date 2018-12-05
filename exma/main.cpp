@@ -171,8 +171,8 @@ int main(int argc, char* argv[])
 
 		if (env.VERBOSE)
 			std::cout << "Saving images..." << std::endl;
-		display_image.save_bmp("exma_output/biofilm_display_image.bmp");
-		biofilm_image.save_bmp("exma_output/biofilm_data.bmp");
+		display_image.save_bmp((env.imageFolderName + "_exma_analysis/biofilm_display_image.bmp").c_str());
+		biofilm_image.save_bmp((env.imageFolderName + "_exma_analysis/biofilm_data.bmp").c_str());
 
 		if (env.VERBOSE)
 			std::cout << "Displaying final data..." << std::endl;
@@ -748,7 +748,7 @@ void calcBinnedThickness(cimg_library::CImg<unsigned char> *concImage, cimg_libr
 	}
 
 	std::ofstream outfile;
-	outfile.open("exma_output/thickness_vs_concentration.csv");
+	outfile.open((env->imageFolderName + "_exma_analysis/thickness-vs-concentration.csv").c_str());
 	outfile.clear();
 	outfile << "% concentration upper stream, thickness (micrometers)\n";
 
