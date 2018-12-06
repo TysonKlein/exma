@@ -446,7 +446,7 @@ cimg_library::CImg<unsigned char> calcConcentrationGradient(cimg_library::CImgLi
 	cimg_library::CImg<unsigned char> output = (*list)[1];
 	int** OUTPUT;
 
-	float C_max = 256.f*256.f*256.f, D = env->DIFFUSIVITY, h = float(env->HEIGHT) * env->PIXEL_WIDTH / 2.f, L = float(env->HEIGHT)* env->PIXEL_WIDTH ,flow_rate = env->FLOW_RATE*1000000000.f/(60.f*60.f*env->CROSS_AREA);
+	float C_max = 256.f*256.f*256.f, D = env->DIFFUSIVITY, h = float(env->MIX_Y)*env->PIXEL_WIDTH, L = float(env->HEIGHT)* env->PIXEL_WIDTH ,flow_rate = env->FLOW_RATE*1000000000.f/(60.f*60.f*env->CROSS_AREA);
 	int C = 0, k_max = env->CONC_FIDELITY;
 
 	OUTPUT = new int*[env->HEIGHT];
@@ -590,6 +590,10 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 								step = step + float(env->CONC_STEP);
 								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
 							}
+							if (j == env->HEIGHT-1)
+							{
+								step = 1000;
+							}
 						}
 					}
 					//Conc lowest on bottom
@@ -612,6 +616,10 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 								}
 								step = step + float(env->CONC_STEP);
 								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
+							}
+							if (j == 0)
+							{
+								step = 1000;
 							}
 						}
 					}
@@ -644,6 +652,10 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 								step = step + float(env->CONC_STEP);
 								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
 							}
+							if (j == env->HEIGHT-1)
+							{
+								step = 1000;
+							}
 						}
 					}
 					//Conc lowest on bottom
@@ -651,6 +663,7 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 					{
 						for (int j = env->HEIGHT - 1; j >= 0; j--)
 						{
+							
 							if (getConcValue(concImage, i, j) > step)
 							{
 								if (i == env->MIX_X + env->CONC_OFFSET)
@@ -664,6 +677,10 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 								}
 								step = step + float(env->CONC_STEP);
 								drawAt(drawImage, i, j, 200, 200, 200, draw_size, env);
+							}
+							if (j == 0)
+							{
+								step = 1000;
 							}
 						}
 					}
