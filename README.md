@@ -11,7 +11,7 @@ These images all represent a vertical layer of a 3D snapshot for an experiment. 
 
 For microfluidics mixing experiments, exma can also calculate the concentration gradient of two fluids based on some constant data, then supply a thickness vs. concentration table for further analysis. This gradient can be combined with the thickness data to produce an image like the one shown below.
 
-![final image](Readme/biofilm_display_image.png)
+![final image](Readme/exma_output.png)
 
 The following was printed from the help file of exma:
 
