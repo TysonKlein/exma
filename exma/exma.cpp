@@ -453,7 +453,7 @@ cimg_library::CImg<unsigned char> calcConcentrationGradient(cimg_library::CImgLi
 	cimg_library::CImg<unsigned char> output = (*list)[1];
 	int** OUTPUT;
 
-	float C_max = 256.f*256.f*256.f, D = env->DIFFUSIVITY, h = float(env->MIX_Y)*env->PIXEL_WIDTH, L = env->CHAN_WIDTH,flow_rate = env->FLOW_RATE*1000000000.f/(60.f*60.f*env->CROSS_AREA);
+	float C_max = 256.f*256.f*256.f, D = env->DIFFUSIVITY, L = env->CHAN_WIDTH, h = L/2, flow_rate = env->FLOW_RATE*1000000000.f/(60.f*60.f*env->CROSS_AREA);
 
 	int C = 0, k_max = env->CONC_FIDELITY;
 
@@ -723,11 +723,11 @@ void drawOverlay(cimg_library::CImg<unsigned char> *concImage, cimg_library::CIm
 		}
 		std::string s;
 		std::string ms = "Biofilm height (µm)";
-		drawImage->draw_text(LstartX, LstartY - 55, ms.c_str(), white, 0, 1, textSize);
-		drawImage->draw_text(LstartX, LstartY + 20 ,"0", white, 0, 1, textSize*0.6f);
-		drawImage->draw_text((LendX + LstartX)/2 - 12, LstartY + 20, std::to_string(env->MAX_THICKNESS/2).c_str(), white, 0, 1, textSize*0.6f);
-		drawImage->draw_text(LendX - 24, LstartY + 20, std::to_string(env->MAX_THICKNESS).c_str(), white, 0, 1, textSize*0.6f);
-		drawImage->draw_text(LstartX, LendY - 55, "50 µm", white, 0, 1, textSize);
+		drawImage->draw_text(LstartX, LstartY - 60, ms.c_str(), white, black, 1, textSize);
+		drawImage->draw_text(LstartX, LstartY + 20 ,"0", white, black, 1, textSize*0.6f);
+		drawImage->draw_text((LendX + LstartX)/2 - 10, LstartY + 20, std::to_string(env->MAX_THICKNESS/2).c_str(), white, black, 1, textSize*0.6f);
+		drawImage->draw_text(LendX - 20, LstartY + 20, std::to_string(env->MAX_THICKNESS).c_str(), white, black, 1, textSize*0.6f);
+		drawImage->draw_text(LstartX, LendY - 60, "50 µm", white, black, 1, textSize);
 
 	for (int i = env->MIX_Y - env->HEIGHT/4; i < env->MIX_Y + env->HEIGHT / 4; i++)
 	{
