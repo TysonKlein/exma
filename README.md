@@ -11,7 +11,7 @@ These images all represent a vertical layer of a 3D snapshot for an experiment. 
 
 For microfluidics mixing experiments, exma can also calculate the concentration gradient of two fluids based on some constant data, then supply a thickness vs. concentration table for further analysis. This gradient can be combined with the thickness data to produce an image like the one shown below.
 
-![final image](Readme/exma_output.png)
+<img src="https://github.com/TysonKlein/exma/blob/master/Readme/exma-output.png" width="800" height="800">
 
 The following was printed from the help file of exma:
 
@@ -29,11 +29,13 @@ Usage:
       --max_space arg          Largest allowable vertical gap (default: 100)
 
  Concentration options:
-  -c, --concentration    Concentration gradient
-      --conc_step arg    Step size for concentration lines around 50%
-                         (default: 20)
-      --conc_offset arg  Offset in pixels for start of concentration analysis
-                         from mixing point (default: 200)
+  -c, --concentration      Concentration gradient
+      --conc_step arg      Step size for concentration lines around 50%
+                           (default: 20)
+      --conc_offset arg    Offset in pixels for start of concentration
+                           analysis from mixing point (default: 200)
+      --conc_fidelity arg  Number of iterations to calculate concentration
+                           gradient (default: 10)
 
  Input/Output options:
   -f, --folder arg        Folder name containing image data
