@@ -33,6 +33,7 @@ struct EnvironmentVariables
 	float PIXEL_WIDTH = 0.15; //micrometers
 	float LAYER_THICKNESS = 1.f; //micrometers
 	float DIFFUSIVITY = 1000.f; //micrometers squared per second
+	float CHAN_WIDTH = 350.f; //micrometers
 };
 
 //Holds the colour values of a pixel
@@ -231,7 +232,7 @@ void parseArgs(int argc, char* argv[], EnvironmentVariables* env)
 			("c,concentration", "Concentration gradient", cxxopts::value<bool>(env->A_CONCENTRATION))
 			("conc_step", "Step size for concentration lines around 50%", cxxopts::value<int>(env->CONC_STEP)->default_value("20"))
 			("conc_offset", "Offset in pixels for start of concentration analysis from mixing point", cxxopts::value<int>(env->CONC_OFFSET)->default_value("200"))
-			("conc_fidelity", "Number of iterations to calculate concentration gradient", cxxopts::value<int>(env->CONC_FIDELITY)->default_value("10"))
+			("conc_fidelity", "Number of iterations to calculate concentration gradient", cxxopts::value<int>(env->CONC_FIDELITY)->default_value("30"))
 			;
 
 		options.add_options() //Other options
@@ -452,7 +453,8 @@ cimg_library::CImg<unsigned char> calcConcentrationGradient(cimg_library::CImgLi
 	cimg_library::CImg<unsigned char> output = (*list)[1];
 	int** OUTPUT;
 
-	float C_max = 256.f*256.f*256.f, D = env->DIFFUSIVITY, h = float(env->MIX_Y)*env->PIXEL_WIDTH, L = float(env->HEIGHT)* env->PIXEL_WIDTH ,flow_rate = env->FLOW_RATE*1000000000.f/(60.f*60.f*env->CROSS_AREA);
+	float C_max = 256.f*256.f*256.f, D = env->DIFFUSIVITY, h = float(env->MIX_Y)*env->PIXEL_WIDTH, L = env->CHAN_WIDTH,flow_rate = env->FLOW_RATE*1000000000.f/(60.f*60.f*env->CROSS_AREA);
+
 	int C = 0, k_max = env->CONC_FIDELITY;
 
 	OUTPUT = new int*[env->HEIGHT];
@@ -899,6 +901,8 @@ void iniInput(std::string iniFile, EnvironmentVariables* env)
 				env->LAYER_THICKNESS = atof(value.c_str());
 			if (name == "DIFFUSIVITY")
 				env->DIFFUSIVITY = atof(value.c_str());
+			if (name == "CHAN_WIDTH")
+				env->CHAN_WIDTH = atof(value.c_str());
 		}
 		inFile.close();
 	}
